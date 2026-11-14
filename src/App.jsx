@@ -1,26 +1,22 @@
 import { useEffect, useState } from 'react';
-import { api, brl } from './api.js';
+import { api, monthLabel, monthNow, shiftMonth } from './api.js';
+import Cards from './screens/Cards.jsx';
+import Overview from './screens/Overview.jsx';
+import Settings from './screens/Settings.jsx';
+import Transactions from './screens/Transactions.jsx';
 
 const APP_NAME = 'Finanças';
 const NAV = [
   { id: 'home', label: 'Visão geral' },
-  { id: 'flow', label: 'Fluxo de caixa' },
+  { id: 'tx', label: 'Lançamentos' },
   { id: 'cards', label: 'Cartões' },
-  { id: 'reserve', label: 'Reserva' },
+  { id: 'settings', label: 'Ajustes' },
 ];
-const ERRORS = {
-  cancelado: 'Login cancelado. Tente de novo.',
-  estado: 'A sessão de login expirou. Tente de novo.',
-  email: 'Sua conta Google precisa ter email verificado.',
-  token: 'Não foi possível validar o login com o Google.',
-  codigo: 'Não foi possível concluir o login.',
-};
 
 function Login() {
-  const erro = new URLSearchParams(location.search).get('erro');
   const [mode, setMode] = useState('login');
   const [form, setForm] = useState({ name: '', email: '', password: '' });
-  const [msg, setMsg] = useState(erro ? ERRORS[erro] || 'Não foi possível entrar.' : '');
+  const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
   const isLogin = mode === 'login';
@@ -52,16 +48,16 @@ function Login() {
         </div>
         <form onSubmit={submit} className="form">
           {!isLogin && (
-            <label>
+            <label className="field">
               Nome
               <input value={form.name} onChange={set('name')} autoComplete="name" required maxLength={80} />
             </label>
           )}
-          <label>
+          <label className="field">
             Email
             <input type="email" value={form.email} onChange={set('email')} autoComplete="email" required />
           </label>
-          <label>
+          <label className="field">
             Senha
             <input
               type="password"
@@ -78,10 +74,6 @@ function Login() {
             {isLogin ? 'Entrar' : 'Criar conta'}
           </button>
         </form>
-        <p className="sep">ou</p>
-        <a className="btn ghost" href="/api/auth/google">
-          Continuar com Google
-        </a>
       </div>
     </main>
   );
@@ -89,11 +81,19 @@ function Login() {
 
 function Shell({ user }) {
   const [tab, setTab] = useState('home');
+  const [month, setMonth] = useState(monthNow());
 
   async function logout() {
     await api('/api/auth/logout', { method: 'POST' });
     location.href = '/';
   }
+
+  const screen = {
+    home: <Overview month={month} go={setTab} />,
+    tx: <Transactions month={month} />,
+    cards: <Cards month={month} />,
+    settings: <Settings user={user} />,
+  }[tab];
 
   return (
     <div className="shell">
@@ -107,7 +107,6 @@ function Shell({ user }) {
           ))}
         </nav>
         <div className="me">
-          {user.avatar_url && <img src={user.avatar_url} alt="" referrerPolicy="no-referrer" />}
           <span>{user.name}</span>
           <button className="link" onClick={logout}>
             Sair
@@ -116,12 +115,18 @@ function Shell({ user }) {
       </aside>
 
       <main className="main">
-        <div className="panel">
-          <h2>{NAV.find((n) => n.id === tab).label}</h2>
-          <p>
-            Olá, {user.name.split(' ')[0]}. Salário cadastrado: {brl(user.monthly_income_cents)}.
-          </p>
-        </div>
+        {tab !== 'settings' && (
+          <div className="monthbar">
+            <button aria-label="Mês anterior" onClick={() => setMonth(shiftMonth(month, -1))}>
+              ‹
+            </button>
+            <h2>{monthLabel(month)}</h2>
+            <button aria-label="Próximo mês" onClick={() => setMonth(shiftMonth(month, 1))}>
+              ›
+            </button>
+          </div>
+        )}
+        {screen}
       </main>
 
       <nav className="bottom">

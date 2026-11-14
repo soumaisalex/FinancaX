@@ -32,6 +32,8 @@ export async function onRequest({ request, env, next, data }) {
     data.userId = session.userId; // único ponto de verdade para filtrar por user_id
     return await next();
   } catch (e) {
+    if (e?.code === '23505') return json({ error: 'Já existe um registro com esse nome.' }, 409);
+    if (e?.code === '22P02' || e?.code === '22007') return json({ error: 'Dados inválidos.' }, 400);
     console.error(url.pathname, e); // aparece em Functions → Real-time logs
     return json({ error: `Erro interno (${e?.name || 'Error'}): veja os logs do Cloudflare.` }, 500);
   }
