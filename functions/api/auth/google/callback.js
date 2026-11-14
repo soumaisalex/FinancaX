@@ -50,13 +50,13 @@ export async function onRequestGet({ request, env }) {
   }
   if (!claims.email || !claims.email_verified) return fail('email');
 
-  const userId = await upsertOAuthUser(env, 'google', {
+  const { id: userId, tokenVersion } = await upsertOAuthUser(env, 'google', {
     sub: claims.sub,
     email: claims.email,
     name: claims.name,
     picture: claims.picture,
   });
-  const session = await signSession(userId, env.SESSION_SECRET);
+  const session = await signSession(userId, tokenVersion, env.SESSION_SECRET);
 
   return redirect(`${url.origin}/`, [
     setCookie(SESSION_COOKIE, session, { maxAge: SESSION_MAX_AGE, secure }),

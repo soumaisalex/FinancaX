@@ -15,3 +15,9 @@ React + Vite · Cloudflare Pages (Functions) · Neon Postgres · login Google.
 ## Regras
 - Valores em centavos (inteiro).
 - `functions/api/_middleware.js` valida a sessão e injeta `data.userId`. Toda query de domínio deve filtrar por `user_id = data.userId`; nunca aceitar `user_id` do body.
+
+## Cadastro próprio (email + senha)
+- Rode `npm run migrate` (aplica `002_password_auth.sql`).
+- Hash PBKDF2-SHA256 (100k iterações, limite do Workers). Se aparecer erro 1102 (CPU) no plano gratuito, reduza com a variável opcional `PBKDF2_ITER` (ex.: 50000); hashes antigos continuam válidos.
+- Limite de tentativas: 5 falhas por email / 30 por IP a cada 15 min; cadastro: 10 por IP.
+- Sem verificação de email nem "esqueci a senha" por enquanto (exigem envio de email). Se o mesmo email entrar depois pelo Google, a conta é vinculada, a senha não verificada é removida e sessões antigas caem.

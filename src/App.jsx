@@ -18,14 +18,69 @@ const ERRORS = {
 
 function Login() {
   const erro = new URLSearchParams(location.search).get('erro');
+  const [mode, setMode] = useState('login');
+  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [msg, setMsg] = useState(erro ? ERRORS[erro] || 'Não foi possível entrar.' : '');
+  const [busy, setBusy] = useState(false);
+  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
+  const isLogin = mode === 'login';
+
+  async function submit(e) {
+    e.preventDefault();
+    setBusy(true);
+    setMsg('');
+    try {
+      await api(`/api/auth/${isLogin ? 'login' : 'register'}`, { method: 'POST', body: form });
+      location.href = '/';
+    } catch (err) {
+      setMsg(err.message);
+      setBusy(false);
+    }
+  }
+
   return (
     <main className="login">
       <div className="panel login-box">
         <h1>{APP_NAME}</h1>
-        <p>Organize suas contas, cartões e faturas em um só lugar.</p>
-        {erro && <p className="error">{ERRORS[erro] || 'Não foi possível entrar.'}</p>}
-        <a className="btn" href="/api/auth/google">
-          Entrar com Google
+        <div className="tabs" role="tablist">
+          <button type="button" className={isLogin ? 'on' : ''} onClick={() => setMode('login')}>
+            Entrar
+          </button>
+          <button type="button" className={!isLogin ? 'on' : ''} onClick={() => setMode('register')}>
+            Criar conta
+          </button>
+        </div>
+        <form onSubmit={submit} className="form">
+          {!isLogin && (
+            <label>
+              Nome
+              <input value={form.name} onChange={set('name')} autoComplete="name" required maxLength={80} />
+            </label>
+          )}
+          <label>
+            Email
+            <input type="email" value={form.email} onChange={set('email')} autoComplete="email" required />
+          </label>
+          <label>
+            Senha
+            <input
+              type="password"
+              value={form.password}
+              onChange={set('password')}
+              autoComplete={isLogin ? 'current-password' : 'new-password'}
+              required
+              minLength={isLogin ? undefined : 8}
+              maxLength={128}
+            />
+          </label>
+          {msg && <p className="error">{msg}</p>}
+          <button className="btn" disabled={busy}>
+            {isLogin ? 'Entrar' : 'Criar conta'}
+          </button>
+        </form>
+        <p className="sep">ou</p>
+        <a className="btn ghost" href="/api/auth/google">
+          Continuar com Google
         </a>
       </div>
     </main>

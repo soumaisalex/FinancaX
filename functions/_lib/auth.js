@@ -22,8 +22,8 @@ export function setCookie(name, value, { maxAge, secure = true } = {}) {
 
 export const clearCookie = (name, secure = true) => setCookie(name, '', { maxAge: 0, secure });
 
-export function signSession(userId, secret) {
-  return new SignJWT({})
+export function signSession(userId, version, secret) {
+  return new SignJWT({ v: version })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(userId)
     .setIssuedAt()
@@ -38,7 +38,7 @@ export async function readSession(request, env) {
     const { payload } = await jwtVerify(token, enc.encode(env.SESSION_SECRET), {
       algorithms: ['HS256'],
     });
-    return payload.sub || null;
+    return payload.sub ? { userId: payload.sub, version: payload.v ?? 0 } : null;
   } catch {
     return null;
   }

@@ -6,7 +6,8 @@ export async function api(path, { method = 'GET', body } = {}) {
     credentials: 'same-origin',
   });
   if (!res.ok) {
-    const err = new Error(`HTTP ${res.status}`);
+    const info = await res.json().catch(() => ({}));
+    const err = new Error(info.error || `HTTP ${res.status}`);
     err.status = res.status;
     throw err;
   }

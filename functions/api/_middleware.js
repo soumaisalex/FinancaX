@@ -1,5 +1,6 @@
 import { readSession } from '../_lib/auth.js';
 import { json } from '../_lib/http.js';
+import { db } from '../_lib/users.js';
 
 export async function onRequest({ request, env, next, data }) {
   const url = new URL(request.url);
@@ -12,8 +13,13 @@ export async function onRequest({ request, env, next, data }) {
 
   if (url.pathname.startsWith('/api/auth/')) return next();
 
-  const userId = await readSession(request, env);
-  if (!userId) return json({ error: 'unauthorized' }, 401);
-  data.userId = userId; // único ponto de verdade para filtrar por user_id
+  const session = await readSession(request, env);
+  if (!session) return json({ error: 'unauthorized' }, 401);
+
+  // token_version permite invalidar sessões (troca de senha, takeover por Google).
+  const [u] = await db(env)`select token_version from users where id = ${session.userId}`;
+  if (!u || u.token_version !== session.version) return json({ error: 'unauthorized' }, 401);
+
+  data.userId = session.userId; // único ponto de verdade para filtrar por user_id
   return next();
 }
