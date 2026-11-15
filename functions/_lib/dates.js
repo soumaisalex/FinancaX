@@ -37,3 +37,9 @@ export function invoiceRefMonth(dateStr, closingDay, dueDay) {
   const due = dueDay > closingDay ? close : addMonths(close, 1);
   return iso(due.y, due.m, 1);
 }
+
+export function shiftMonth(month, n) {
+  const [y, m] = month.split('-').map(Number);
+  const r = addMonths({ y, m }, n);
+  return `${r.y}-${pad(r.m)}`;
+}

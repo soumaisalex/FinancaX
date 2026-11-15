@@ -1,3 +1,4 @@
+import { Check } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 export function Modal({ title, onClose, children }) {
@@ -26,6 +27,28 @@ export const Field = ({ label, children }) => (
     {label}
     {children}
   </label>
+);
+
+export const IconChip = ({ Icon, color, size = 30 }) => (
+  <span className="ichip" style={{ '--c': color, width: size, height: size }}>
+    <Icon size={Math.round(size * 0.52)} />
+  </span>
+);
+
+export const Round = ({ on, onClick, label }) => (
+  <button type="button" className={`round ${on ? 'on' : ''}`} onClick={onClick} aria-pressed={on} aria-label={label}>
+    {on && <Check size={12} strokeWidth={3} />}
+  </button>
+);
+
+export const Seg = ({ value, onChange, options }) => (
+  <div className="seg" role="group">
+    {options.map(([k, l]) => (
+      <button key={k} type="button" className={value === k ? 'on' : ''} onClick={() => onChange(k)}>
+        {l}
+      </button>
+    ))}
+  </div>
 );
 
 // Carrega dados; mantém o resultado anterior durante o recarregamento.

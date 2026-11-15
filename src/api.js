@@ -47,3 +47,4 @@ export function toCents(input) {
   return Number.isFinite(n) ? Math.round(n * 100) : null;
 }
 export const centsToInput = (c) => (Number(c) / 100).toFixed(2).replace('.', ',');
+export const fmtDateFull = (iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(2, 4)}`;
