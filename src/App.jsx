@@ -1,7 +1,8 @@
-import { ChevronLeft, ChevronRight, CreditCard, LogOut, Moon, PiggyBank, Plus, SlidersHorizontal, Sun, TrendingUp, User } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CreditCard, LogOut, Moon, PiggyBank, Plus, SlidersHorizontal, Sun, Target, TrendingUp, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api, monthLabel, monthNow, shiftMonth } from './api.js';
 import { TxForm } from './forms.jsx';
+import Budgets from './screens/Budgets.jsx';
 import Cards from './screens/Cards.jsx';
 import CashFlow from './screens/CashFlow.jsx';
 import Overview from './screens/Overview.jsx';
@@ -88,17 +89,19 @@ function Shell({ user }) {
   const NAV = [
     { id: 'home', label: first, Icon: User },
     { id: 'cards', label: 'Cartões', Icon: CreditCard },
-    { id: 'cashflow', label: 'Fluxo de caixa', Icon: TrendingUp },
+    { id: 'budgets', label: 'Orçamentos', short: 'Limites', Icon: Target },
+    { id: 'cashflow', label: 'Fluxo de caixa', short: 'Fluxo', Icon: TrendingUp },
     { id: 'reserves', label: 'Reservas', Icon: PiggyBank },
   ];
   const screen = {
     home: <Overview user={user} month={month} rev={rev} bump={bump} go={setTab} />,
     cards: <Cards month={month} key={rev} />,
+    budgets: <Budgets month={month} rev={rev} />,
     cashflow: <CashFlow />,
     reserves: <Reserves />,
     settings: <Settings user={user} />,
   }[tab];
-  const withMonth = tab === 'home' || tab === 'cards';
+  const withMonth = tab === 'home' || tab === 'cards' || tab === 'budgets';
 
   return (
     <div className="shell">
@@ -137,8 +140,8 @@ function Shell({ user }) {
       </div>
 
       <nav className="bottom">
-        {NAV.map(({ id, label, Icon }) => (
-          <button key={id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}><Icon size={20} />{label}</button>
+        {NAV.map(({ id, label, short, Icon }) => (
+          <button key={id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}><Icon size={20} />{short || label}</button>
         ))}
         <button className={tab === 'settings' ? 'on' : ''} onClick={() => setTab('settings')}><SlidersHorizontal size={20} />Ajustes</button>
       </nav>

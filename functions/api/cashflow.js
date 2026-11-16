@@ -27,16 +27,14 @@ export async function onRequestGet({ request, env, data }) {
 
   const [opening, txs, invs, user] = await Promise.all([
     sql(
-      `SELECT
-         (SELECT COALESCE(SUM(a.${INITIAL_COL}), 0) FROM accounts a WHERE a.user_id = $1::uuid)
-         + (SELECT COALESCE(SUM(CASE WHEN kind = '${INCOME}' THEN amount_cents ELSE -amount_cents END), 0)
-              FROM transactions
-             WHERE user_id = $1::uuid AND account_id IS NOT NULL AND invoice_id IS NULL AND paid
-               AND kind IN ('${INCOME}', '${EXPENSE}'))
-         - (SELECT COALESCE(SUM(CASE WHEN t.kind = '${INCOME}' THEN -t.amount_cents ELSE t.amount_cents END), 0)
-              FROM invoices i JOIN transactions t ON t.invoice_id = i.id
-             WHERE i.user_id = $1::uuid AND i.paid_at IS NOT NULL AND i.paid_account_id IS NOT NULL)
-         AS total`,
+      `SELECT COALESCE(SUM(
+         a.${INITIAL_COL}
+         + COALESCE((SELECT SUM(CASE WHEN t.kind = '${INCOME}' THEN t.amount_cents ELSE -t.amount_cents END)
+                       FROM transactions t WHERE t.account_id = a.id AND t.paid), 0)
+         - COALESCE((SELECT SUM(t.amount_cents) FROM invoices i JOIN transactions t ON t.invoice_id = i.id
+                      WHERE i.paid_account_id = a.id AND i.paid_at IS NOT NULL), 0)
+       ), 0)::text AS total
+       FROM accounts a WHERE a.user_id = $1::uuid AND NOT a.archived`,
       [uid]
     ),
     sql(

@@ -11,8 +11,12 @@ function Salary({ user }) {
     e.preventDefault();
     const c = toCents(v);
     if (c === null || c < 0) return setMsg('Valor inválido.');
-    await api('/api/me', { method: 'PATCH', body: { monthly_income_cents: c } });
-    setMsg('Salvo.');
+    try {
+      await api('/api/me', { method: 'PATCH', body: { monthly_income_cents: c } });
+      setMsg('Salvo.');
+    } catch (e2) {
+      setMsg(e2.message);
+    }
   }
   return (
     <section className="panel">

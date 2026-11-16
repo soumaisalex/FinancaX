@@ -28,7 +28,7 @@ export async function onRequestPost({ request, env }) {
     on conflict (email) do nothing
     returning id, token_version`;
   if (!user) {
-    return json({ error: 'Este email já está cadastrado. Entre com sua senha ou com o Google.' }, 409);
+    return json({ error: 'Este email já está cadastrado. Entre com sua senha.' }, 409);
   }
   await seedCategories(sql, user.id);
 
