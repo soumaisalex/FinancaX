@@ -1,10 +1,8 @@
 import { json } from '../_lib/http.js';
-import * as fin from '../_lib/finance.js';
+import { materialize } from '../_lib/finance.js';
 import { db, bad } from '../_lib/p3.js';
 
-// >>> AJUSTE SE PRECISO: coluna do saldo inicial em accounts
-const INITIAL_COL = 'initial_cents';
-// >>> AJUSTE SE PRECISO: valores de transactions.kind
+const INITIAL_COL = 'initial_balance_cents';
 const INCOME = 'income', EXPENSE = 'expense';
 
 const addM = (ym, n) => {
@@ -24,12 +22,8 @@ export async function onRequestGet({ request, env, data }) {
   const months = Array.from({ length: n }, (_, i) => addM(cur, i));
   const end = addM(cur, n); // exclusivo
 
-  // Gera recorrências dos meses projetados (mesmo efeito de abrir o mês). Ajuste a assinatura se diferir.
-  if (typeof fin.materialize === 'function') {
-    for (const m of months) {
-      try { await fin.materialize(sql, uid, m); } catch (e) { console.error('materialize', m, e); }
-    }
-  }
+  // Gera recorrências dos meses projetados (idempotente, igual a abrir o mês).
+  await Promise.all(months.map((m) => materialize(sql, uid, m.slice(0, 7))));
 
   const [opening, txs, invs, user] = await Promise.all([
     sql(
@@ -54,13 +48,12 @@ export async function onRequestGet({ request, env, data }) {
       [uid, end]
     ),
     sql(
-      `SELECT i.ref_month::text AS ref_month, c.closing_day, c.due_day,
+      `SELECT i.ref_month::text AS ref_month,
               COALESCE(SUM(CASE WHEN t.kind = '${INCOME}' THEN -t.amount_cents ELSE t.amount_cents END), 0)::text AS total
          FROM invoices i
-         JOIN credit_cards c ON c.id = i.card_id AND c.user_id = i.user_id
          LEFT JOIN transactions t ON t.invoice_id = i.id
         WHERE i.user_id = $1::uuid AND i.paid_at IS NULL
-        GROUP BY i.id, c.closing_day, c.due_day`,
+        GROUP BY i.id`,
       [uid]
     ),
     sql`SELECT monthly_income_cents::text AS s FROM users WHERE id = ${uid}::uuid`,
@@ -79,9 +72,7 @@ export async function onRequestGet({ request, env, data }) {
     else rows[i].expense_cents += Number(t.total);
   }
   for (const f of invs) {
-    const ref = f.ref_month.slice(0, 7) + '-01';
-    const due = addM(ref, f.due_day > f.closing_day ? 0 : 1);
-    const i = bucket(due);
+    const i = bucket(f.ref_month); // ref_month já é o mês de vencimento (dia 1)
     if (i == null) continue;
     rows[i].invoices_cents += Number(f.total);
   }

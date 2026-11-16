@@ -1,6 +1,4 @@
-import { neon } from '@neondatabase/serverless';
-
-export const db = (env) => neon(env.DATABASE_URL);
+export { db } from './users.js';
 
 export const bad = (message, status = 400) =>
   new Response(JSON.stringify({ error: message }), {

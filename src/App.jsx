@@ -1,9 +1,11 @@
-import { ChevronLeft, ChevronRight, CreditCard, LogOut, Moon, Plus, SlidersHorizontal, Sun, User } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CreditCard, LogOut, Moon, PiggyBank, Plus, SlidersHorizontal, Sun, TrendingUp, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api, monthLabel, monthNow, shiftMonth } from './api.js';
 import { TxForm } from './forms.jsx';
 import Cards from './screens/Cards.jsx';
+import CashFlow from './screens/CashFlow.jsx';
 import Overview from './screens/Overview.jsx';
+import Reserves from './screens/Reserves.jsx';
 import Settings from './screens/Settings.jsx';
 import { applyTheme, getTheme, saveTheme } from './theme.js';
 
@@ -86,12 +88,17 @@ function Shell({ user }) {
   const NAV = [
     { id: 'home', label: first, Icon: User },
     { id: 'cards', label: 'Cartões', Icon: CreditCard },
+    { id: 'cashflow', label: 'Fluxo de caixa', Icon: TrendingUp },
+    { id: 'reserves', label: 'Reservas', Icon: PiggyBank },
   ];
   const screen = {
     home: <Overview user={user} month={month} rev={rev} bump={bump} go={setTab} />,
     cards: <Cards month={month} key={rev} />,
+    cashflow: <CashFlow />,
+    reserves: <Reserves />,
     settings: <Settings user={user} />,
   }[tab];
+  const withMonth = tab === 'home' || tab === 'cards';
 
   return (
     <div className="shell">
@@ -117,7 +124,7 @@ function Shell({ user }) {
       </aside>
 
       <div className="content">
-        {tab !== 'settings' && (
+        {withMonth && (
           <header className="topbar panel">
             <button className="sq" aria-label="Mês anterior" onClick={() => setMonth(shiftMonth(month, -1))}><ChevronLeft size={16} /></button>
             <h2>{monthLabel(month)}</h2>

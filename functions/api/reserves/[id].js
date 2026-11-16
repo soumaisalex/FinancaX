@@ -4,7 +4,7 @@ import { db, bad, readBody, isInt, isDate, isColor, cleanText } from '../../_lib
 
 async function load(sql, userId, id) {
   const [r] = await sql`
-    SELECT r.id, r.name, r.goal_cents::text AS goal_cents, r.target_date::text AS target_date,
+    SELECT r.id, r.name, r.target_cents::text AS target_cents, r.target_date::text AS target_date,
            r.color, r.archived,
            (SELECT COALESCE(SUM(amount_cents), 0) FROM reserve_entries
              WHERE reserve_id = r.id AND user_id = r.user_id)::text AS balance_cents
@@ -35,9 +35,9 @@ export async function onRequestPatch({ request, env, data, params }) {
 
   let name = cur.name;
   if ('name' in b) { name = cleanText(b.name, 60); if (!name) return bad('Nome inválido'); }
-  let goal = cur.goal_cents;
-  if ('goal_cents' in b) {
-    goal = b.goal_cents === '' ? null : b.goal_cents;
+  let goal = cur.target_cents;
+  if ('target_cents' in b) {
+    goal = b.target_cents === '' ? null : b.target_cents;
     if (goal !== null && (!isInt(goal) || goal <= 0)) return bad('Meta inválida');
   }
   let target = cur.target_date;
@@ -53,7 +53,7 @@ export async function onRequestPatch({ request, env, data, params }) {
   const archived = 'archived' in b ? !!b.archived : cur.archived;
 
   await sql`
-    UPDATE reserves SET name = ${name}, goal_cents = ${goal}::bigint, target_date = ${target}::date,
+    UPDATE reserves SET name = ${name}, target_cents = ${goal}::bigint, target_date = ${target}::date,
            color = ${color}, archived = ${archived}
     WHERE id = ${params.id}::uuid AND user_id = ${data.userId}::uuid`;
   return json({ reserve: await load(sql, data.userId, params.id) });

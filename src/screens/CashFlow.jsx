@@ -1,90 +1,73 @@
-import { useEffect, useState } from 'react';
-import { req, brl } from '../lib/req.js';
+import { useState } from 'react';
+import { api, brl } from '../api.js';
+import { Loading, Seg, useLoad } from '../ui.jsx';
 
 const MES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 const label = (m) => `${MES[Number(m.slice(5, 7)) - 1]}/${m.slice(2, 4)}`;
-const card = { background: 'var(--card, rgba(127,127,127,.08))', borderRadius: 16, padding: 16 };
+const short = (c) => (c / 100).toLocaleString('pt-BR', { notation: 'compact', maximumFractionDigits: 1 });
+const td = { padding: '8px 10px', textAlign: 'right', whiteSpace: 'nowrap' };
 
 export default function CashFlow() {
   const [n, setN] = useState(6);
-  const [d, setD] = useState(null);
-  const [err, setErr] = useState('');
-
-  useEffect(() => {
-    setD(null);
-    req('GET', `/api/cashflow?months=${n}`).then(setD).catch((e) => setErr(e.message));
-  }, [n]);
-
-  if (err) return <div style={{ color: '#ef4444' }}>{err}</div>;
-  if (!d) return <p>Carregando…</p>;
-
-  const vals = d.months.map((m) => m.closing_cents);
-  const max = Math.max(1, ...vals.map(Math.abs));
-  const low = d.months.reduce((a, b) => (b.closing_cents < a.closing_cents ? b : a));
+  const q = useLoad(() => api(`/api/cashflow?months=${n}`), [n]);
+  if (!q.data) return <Loading q={q} />;
+  const { opening_cents, months } = q.data;
+  const max = Math.max(1, ...months.map((m) => Math.abs(m.closing_cents)));
+  const low = months.reduce((a, b) => (b.closing_cents < a.closing_cents ? b : a));
 
   return (
-    <div style={{ display: 'grid', gap: 16 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 style={{ margin: 0 }}>Fluxo de caixa</h2>
-        <select value={n} onChange={(e) => setN(Number(e.target.value))}
-          style={{ padding: 8, borderRadius: 8, background: 'transparent', color: 'inherit', border: '1px solid rgba(127,127,127,.35)' }}>
-          {[3, 6, 12, 24].map((k) => <option key={k} value={k}>{k} meses</option>)}
-        </select>
-      </div>
-
-      <div style={{ ...card, display: 'flex', gap: 24, flexWrap: 'wrap' }}>
-        <div><small style={{ opacity: .7 }}>Saldo atual nas contas</small><div style={{ fontSize: 22, fontWeight: 700 }}>{brl(d.opening_cents)}</div></div>
-        <div><small style={{ opacity: .7 }}>Menor saldo previsto</small>
-          <div style={{ fontSize: 22, fontWeight: 700, color: low.closing_cents < 0 ? '#ef4444' : undefined }}>
-            {brl(low.closing_cents)} <small style={{ opacity: .7, fontWeight: 400 }}>({label(low.month)})</small>
-          </div>
+    <>
+      <section className="panel">
+        <div className="row between">
+          <h3>Projeção de saldo</h3>
+          <Seg value={n} onChange={setN} options={[[3, '3m'], [6, '6m'], [12, '12m'], [24, '24m']]} />
         </div>
-      </div>
-
-      <div style={{ ...card, display: 'flex', alignItems: 'center', gap: 6, height: 160, overflowX: 'auto' }}>
-        {d.months.map((m) => {
-          const h = Math.max(4, Math.round((Math.abs(m.closing_cents) / max) * 60));
-          const neg = m.closing_cents < 0;
-          return (
-            <div key={m.month} style={{ flex: 1, minWidth: 36, textAlign: 'center' }}>
-              <div style={{ height: 64, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-                {!neg && <div style={{ width: '60%', height: h, background: '#10b981', borderRadius: 6 }} />}
+        <div className="legend3">
+          <div><small>Saldo atual nas contas</small><b>{brl(opening_cents)}</b></div>
+          <div>
+            <small>Menor saldo previsto ({label(low.month)})</small>
+            <b className={low.closing_cents < 0 ? 'neg' : ''}>{brl(low.closing_cents)}</b>
+          </div>
+          <div><small>Saldo em {label(months[months.length - 1].month)}</small><b>{brl(months[months.length - 1].closing_cents)}</b></div>
+        </div>
+        <div className="hist">
+          {months.map((m, i) => (
+            <div className="hcol" key={m.month}>
+              <span className="hval">{short(m.closing_cents)}</span>
+              <div className="hbar">
+                <i style={{ height: Math.max(4, Math.round((Math.abs(m.closing_cents) / max) * 120)), background: m.closing_cents < 0 ? 'var(--danger)' : 'var(--pos)' }} />
               </div>
-              <div style={{ borderTop: '1px solid rgba(127,127,127,.4)' }} />
-              <div style={{ height: 64, display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}>
-                {neg && <div style={{ width: '60%', height: h, background: '#ef4444', borderRadius: 6 }} />}
-              </div>
-              <small style={{ opacity: .7 }}>{label(m.month)}</small>
+              <span className={`hm ${i === 0 ? 'now' : ''}`}>{label(m.month)}</span>
             </div>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      </section>
 
-      <div style={{ ...card, overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, whiteSpace: 'nowrap' }}>
+      <section className="panel" style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
           <thead>
-            <tr style={{ textAlign: 'right', opacity: .7 }}>
+            <tr className="muted">
               {['Mês', 'Salário', 'Receitas', 'Despesas', 'Faturas', 'Saldo do mês', 'Saldo final'].map((h, i) => (
-                <th key={h} style={{ padding: '6px 8px', textAlign: i ? 'right' : 'left', fontWeight: 500 }}>{h}</th>
+                <th key={h} style={{ ...td, textAlign: i ? 'right' : 'left', fontWeight: 500 }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {d.months.map((m) => (
-              <tr key={m.month} style={{ borderTop: '1px solid rgba(127,127,127,.2)', textAlign: 'right' }}>
-                <td style={{ padding: '6px 8px', textAlign: 'left' }}>{label(m.month)}</td>
-                <td style={{ padding: '6px 8px' }}>{brl(m.salary_cents)}</td>
-                <td style={{ padding: '6px 8px' }}>{brl(m.income_cents)}</td>
-                <td style={{ padding: '6px 8px' }}>{brl(m.expense_cents)}</td>
-                <td style={{ padding: '6px 8px' }}>{brl(m.invoices_cents)}</td>
-                <td style={{ padding: '6px 8px', color: m.net_cents < 0 ? '#ef4444' : undefined }}>{brl(m.net_cents)}</td>
-                <td style={{ padding: '6px 8px', fontWeight: 700, color: m.closing_cents < 0 ? '#ef4444' : undefined }}>{brl(m.closing_cents)}</td>
+            {months.map((m) => (
+              <tr key={m.month} style={{ borderTop: '1px solid var(--line)' }}>
+                <td style={{ ...td, textAlign: 'left' }}>{label(m.month)}</td>
+                <td style={td}>{brl(m.salary_cents)}</td>
+                <td style={td}>{brl(m.income_cents)}</td>
+                <td style={td}>{brl(m.expense_cents)}</td>
+                <td style={td}>{brl(m.invoices_cents)}</td>
+                <td style={td} className={m.net_cents < 0 ? 'neg' : ''}>{brl(m.net_cents)}</td>
+                <td style={td}><b className={m.closing_cents < 0 ? 'neg' : ''}>{brl(m.closing_cents)}</b></td>
               </tr>
             ))}
           </tbody>
         </table>
-        <small style={{ opacity: .7 }}>Projeção com itens ainda não pagos; faturas entram no mês do vencimento.</small>
-      </div>
-    </div>
+        <p className="sub">Considera só o que ainda não foi pago (atrasados entram no mês atual). Faturas entram no mês do vencimento.</p>
+      </section>
+    </>
   );
 }
